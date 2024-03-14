@@ -1,0 +1,50 @@
+{% extends "index.html" %}
+
+{% block title %}<title>Фильмы</title>{% endblock %}
+
+{% block body %}
+<div class="body_container">
+    <table id="table">
+        <thead>
+            <tr>
+                <th class="sortable" data-sort="movie_title">Название фильма</th>
+                <th class="sortable" data-sort="movie_date">Дата выхода</th>
+                <th class="sortable" data-sort="movie_director">Режиссёр</th>
+                <th class="sortable" data-sort="movie_actors">Актёры</th>
+            </tr>
+        </thead>
+        <tbody class="movies_rows">
+        </tbody>
+    </table>
+    <div class="pagination">
+        <span class="step_links">
+        </span>
+    </div>
+    <br>
+    <div class="movie-filters">
+        <p>Фильтр:</p>
+        <table>
+            <tbody>
+                <tr>
+                    <td>Год выпуска</td>
+                    <td>Режиссёр</td>
+                    <td>Актёр</td>
+                </tr>
+                <tr>
+                    <td><input class="year-filter" param="year" type="text" placeholder="дд.мм.гггг"></td>
+                    <td><input class="director-filter" param="director" type="text"></td>
+                    <td><input class="actor-filter" param="actor" type="text"></td>
+                </tr>
+            </tbody>
+        </table>
+        <br>
+        <button class="accept-filters-btn" disabled="true">Применить фильтр</button>
+        <button class="reset-filters-btn" disabled="true">Сбросить фильтр</button>
+    </div>
+    <p><a href="create-movie">Добавить фильм</a> <a href="create-director">Добавить режиссёра</a> <a href="create-actor">Добавить актёра</a></p>
+</div>
+{% endblock %}
+{% block scripts %}
+    {% load static %}
+    <script src="{% static 'scripts/main.js' %}"></script>
+{% endblock %}

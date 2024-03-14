@@ -1,0 +1,18 @@
+{% extends "index.html" %}
+
+{% block title %}<title>{{ movie.movie_title }}</title>{% endblock %}
+
+{% block body %}
+    <h1>{{ movie.movie_title }}</h1>
+    <p>Дата выхода: {{ movie.movie_date }}</p>
+    {% for director in movie.movie_director.all %}
+        <p>Режиссёр: <a href="director-{{ director.pk }}">{{ director.director_name }}</a></p>
+    {% endfor %}
+    <p>Актёры: 
+    {% for actor in movie.movie_actors.all %}
+        <a href="actor-{{ actor.pk }}">{{ actor.actor_name }}</a>
+    {% endfor %}
+    </p>
+    <p><a href="update-movie-{{ movie.pk }}">Изменить</a> <a href="delete-movie-{{ movie.pk }}">Удалить</a></p>
+    <p><a href="/">Главная</a></p>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "index.html" %}
+
+{% block title %}
+    {% if update %}
+        <title>{{ actor.actor_name }} - Редактирование</title>
+    {% else %}
+        <title>Добавить актёра</title>
+    {% endif %}
+{% endblock %}
+
+{% block body %}
+    {% if update %}
+        <h1>{{ object.actor_name }}. Редактировать</h1>
+    {% else %}
+        <h1>Добавить нового актёра</h1>
+    {% endif %}
+    <form action="" method="post">
+        {% csrf_token %}
+        <span>Имя актёра: </span>
+        <input type="text" name="actor_name" value="{{ object.actor_name }}" maxlength="20" required="" id="id_actor_name">
+        {% if update %}
+            <button type="submit">Сохранить</button>
+        {% else %}
+            <button type="submit">Добавить актёра</button>
+        {% endif %}
+    </form>
+{% endblock %}

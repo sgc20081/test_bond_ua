@@ -1,0 +1,30 @@
+table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+  
+  th {
+    cursor: pointer;
+  }
+  
+  .sortable:hover {
+    background-color: #ccc;
+  }
+  
+  .sorted {
+    background-color: #f0f0f0;
+  }
+  
+  .sorted_asc::after {
+    content: " ↑";
+  }
+  
+  .sorted_desc::after {
+    content: " ↓";
+  }

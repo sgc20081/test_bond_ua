@@ -1,0 +1,42 @@
+{% extends "index.html" %}
+
+{% block title %}
+    {% if update %}
+        <title>{{ object.director_name }} - Редактирование</title>
+    {% else %}
+        <title>Добавить режиссёра</title>
+    {% endif %}
+{% endblock %}
+
+{% block body %}
+    {% if update %}
+        <h1>{{ object.director_name }}. Редактировать</h1>
+    {% else %}
+        <h1>Добавить нового режиссёра</h1>
+    {% endif %}
+    <form action="" method="post">
+        {% csrf_token %}
+        <span>Имя режиссёра: </span> 
+        <input type="text" name="director_name" value="{{ object.director_name }}" maxlength="20" required="" id="id_director_name">
+        {% if update %}
+            <button type="submit">Сохранить</button>
+        {% else %}
+            <button type="submit">Добавить режиссёра</button>
+        {% endif %}
+    </form>
+{% endblock %}
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        {% if update %}
+            <title>{{ object.director_name }} - Редактирование</title>
+        {% else %}
+            <title>Добавить режиссёра</title>
+        {% endif %}
+    </head>
+    <body>
+    </body>
+</html>

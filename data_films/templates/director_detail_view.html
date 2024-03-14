@@ -1,0 +1,14 @@
+{% extends "index.html" %}
+
+{% block title %}<title>{{ director.director_name }}</title>{% endblock %}
+
+{% block body %}
+    <h1>{{ director.director_name }}</h1>
+    <p>Фильмы: 
+    {% for movie in director.movie_set.all %}
+        <a href="movie-{{ movie.pk }}">{{ movie.movie_title }}</a>
+    {% endfor %}
+    </p>
+    <p><a href="update-director-{{ director.pk }}">Изменить</a> <a href="delete-director-{{ director.pk }}">Удалить</a></p>
+    <p><a href="/">Главная</a></p>
+{% endblock %}

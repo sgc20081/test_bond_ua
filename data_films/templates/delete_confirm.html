@@ -1,0 +1,19 @@
+{% extends "index.html" %}
+
+{% block title %}<title>Подтверждение удаления - {{ object }}</title>{% endblock %}
+
+{% block body %}
+    <p>Вы уверены, что хотите удалить <b>{{ object }}</b>?</p>
+    <form action="" method="post">
+        {% csrf_token %}
+        <button type="submit">Удалить</button>
+        <button onclick="goBack()">Нет</button>
+    </form>
+    {% block scripts %}
+        <script>
+            function goBack() {
+                window.history.back();
+            }
+        </script>
+    {% endblock %}
+{% endblock %}
