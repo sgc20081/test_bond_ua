@@ -3,3 +3,4 @@ django==5.0.2
 djangorestframework==3.14.0
 django-filter==23.5
 python-dotenv==1.0.1
+django-cors-headers==4.3.1
