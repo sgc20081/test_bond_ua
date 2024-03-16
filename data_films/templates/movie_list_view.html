@@ -31,7 +31,7 @@
                     <td>Актёр</td>
                 </tr>
                 <tr>
-                    <td><input class="year-filter" param="year" type="text" placeholder="дд.мм.гггг"></td>
+                    <td><input class="year-filter" param="year" type="date"></td>
                     <td><input class="director-filter" param="director" type="text"></td>
                     <td><input class="actor-filter" param="actor" type="text"></td>
                 </tr>
@@ -46,5 +46,5 @@
 {% endblock %}
 {% block scripts %}
     {% load static %}
-    <script src="{% static 'scripts/main.js' %}"></script>
+    <script src="static/scripts/main.js"></script>
 {% endblock %}

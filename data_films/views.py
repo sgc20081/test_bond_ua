@@ -11,7 +11,6 @@ from .forms import  DirectorForm, ActorForm
 class MovieListView(TemplateView):
     template_name = 'movie_list_view.html'
 
-
 class MovieCreateView(CreateView):
     model = Movie
     template_name = 'movie_create_view.html'

@@ -15,15 +15,13 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
-
-print('=================================================================')
-print(os.environ.get('TEST_ENV_VAL'))
-print('=================================================================')
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+dotenv_path = os.path.join(BASE_DIR, '.env')
+load_dotenv(dotenv_path)
+
+# print(os.environ.get('TEST_ENV_VAL'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -34,8 +32,19 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['localhost']
-CORS_ALLOWED_ORIGINS = ['http://localhost:8080']
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost',
+    'sgc20081.pythonanywhere.com',
+    'www.sgc20081.pythonanywhere.com'
+]
+
+CORS_ALLOWED_ORIGINS = [
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+    'http://sgc20081.pythonanywhere.com',
+    'http://www.sgc20081.pythonanywhere.com'
+]
 
 
 # Application definition
@@ -127,18 +136,15 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 # STATICFILES_DIRS = [
 #     os.path.join(BASE_DIR, 'data_films', 'static'),
 # ]
-# STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATIC_ROOT = BASE_DIR / 'static'
-STATIC_URL = 'static/'
 
-# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATIC_ROOT = BASE_DIR / 'static'
+STATIC_URL = '/static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

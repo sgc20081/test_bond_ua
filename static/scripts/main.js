@@ -1,22 +1,8 @@
 $(document).ready(function() {
 
-    // const headers = $("table th.sortable");
-
-    // $.each(headers, (ind, header)=>{
-    //     $(header).on('click', ()=>{
-    //         const sort_direction = $(header).hasClass("sorted_asc") ? "sorted_desc" : "sorted_asc";
-    //         const data_sort = $(header).attr('data-sort');
-
-    //         $.each(headers, (ind, header)=>{$(header).removeClass("sorted sorted_asc sorted_desc")});
-
-    //         $(header).addClass(`${sort_direction} sorted`);
-
-    //         ajax_sort_request(data_sort, sort_direction);
-    //     });
-    // });
-    
     movies_api_url = new UrlParametres(`${window.location.origin}/movies-api`);
-
+    progress_loader = new LoadingAnimation({parent_el: $('.movies_rows'), text: 'Загрузка списка фильмов'});
+    
     movies_api_request();
     main_function();
 });
@@ -119,7 +105,7 @@ class UrlParametres {
 
     /**
      * @param {dict} params
-     * @returns {}
+     * @returns {str}
      */
     add_params (params) {
         if (!($.isPlainObject(params) && !$.isArray(params))) {
@@ -133,7 +119,7 @@ class UrlParametres {
     
     /**
      * @param {list} params 
-     * @returns {}
+     * @returns {str}
      */
     delete_params (params) {
         if (!$.isArray(params)) {
@@ -153,7 +139,7 @@ class UrlParametres {
     };
 
     /**
-     * @returns {}
+     * @returns {this}
      */
     delete_all_params() {
         $.each(this.params, (key, value)=>{
@@ -168,11 +154,66 @@ class UrlParametres {
     }
 };
 
+class LoadingAnimation {
+    /**
+     * @param {dict} props
+     * Props dict must contain:
+     * 
+     * parent_el: jqueryObject
+     * 
+     * text: str
+     */
+    constructor(props) {
+        this.parent_el = props.parent_el;
+        this.text = props.text;
+        this.state = '';
+
+        this.original_loader_el = $(`<p>${this.text}</p>`);
+        this.loader_el = this.original_loader_el;
+    }
+
+    __set_html_loader__() {
+        this.parent_el.html(`<br>${this.loader_el.html()}<br>`);
+    };
+
+    start_animation() {
+        this.state = true;
+        this.__set_html_loader__();
+
+        let i = 0;
+        const animate = ()=>{
+            if (i < 5) {
+                setTimeout(()=>{
+                    if (this.state) {
+                        this.loader_el.text(this.loader_el.text()+'.');
+                        this.__set_html_loader__();
+                        i++;
+                        animate();
+                    } else {
+                        return;
+                    }
+                }, 1000);
+            }
+            else {
+                i = 0;
+                this.loader_el = $(`<p>${this.text}</p>`);
+                this.__set_html_loader__();
+                animate();
+            }
+        };
+        animate();
+    };
+
+    stop_animation() {
+        this.state = false;
+    };
+};
 
 // ===================================================================================
 // Movies filters action functions
 
 let url = '';
+let progress_loader = '';
 
 function main_function() {
     pagination_event();
@@ -182,17 +223,21 @@ function main_function() {
 
 function movies_api_request() {
     
+    progress_loader.start_animation()
+
     $.ajax({
         url: movies_api_url.url,
         method: 'GET',
         dataType: 'json',
         success: (response)=>{
             
+            progress_loader.stop_animation();
             response_to_html(response);
             main_function();
         },
         error: (xhr, status, error)=>{
-            console.error(`AJAX error: ${xhr}, ${status}, ${error}`)
+            console.error(`AJAX error: ${xhr}, ${status}, ${error}`);
+            main_function();
         },
     })
 }
@@ -240,18 +285,26 @@ function filters_movies_api_request() {
 
         movies_api_url.add_params(params)
 
+        progress_loader.start_animation();
+
         $.ajax({
             url: movies_api_url.url,
             method: 'GET',
             dataType: 'json',
             success: (response)=>{
                 
+                progress_loader.stop_animation();
                 response_to_html(response);
+
+                if (response.results.length == 0){
+                    $('.movies_rows').html('<p><b>Совпадений не найдено<b></p>');
+                };
+
                 main_function();
             },
             error: (xhr, status, error)=>{
                 console.error(`AJAX error: ${xhr}, ${status}, ${error}`);
-                $('.movies_rows').html('<p><b>Совпадений не найдено<b></p>');
+                main_function();
             },
         })
     })
@@ -272,17 +325,21 @@ function reset_filters() {
             resest_btn.prop('disabled', true);
         })
 
+        progress_loader.start_animation();
+
         $.ajax({
             url: movies_api_url.cleaned_url,
             method: 'GET',
             dataType: 'json',
             success: function(response) {
 
+                progress_loader.stop_animation();
                 response_to_html(response);
                 main_function();
             },
             error: function(xhr, status, error) {
                 console.error('Error: ', xhr, status, error);
+                main_function();
             }
         })
     });
@@ -357,12 +414,15 @@ function pagination_event() {
 
             movies_api_url.add_params({'page': page});
 
+            progress_loader.start_animation();
+
             $.ajax({
                 url: movies_api_url.url,
                 method: 'GET',
                 dataType: 'json',
                 success: function(response) {
                     
+                    progress_loader.stop_animation();
                     response_to_html(response);
                     main_function();
                 },
@@ -374,45 +434,3 @@ function pagination_event() {
         });
     });
 };
-
-// function history_action_tracker() {
-
-//     $(window).off('popstate').on('popstate', function(event) {
-//         console.log('Используется навигация, отправляю запрос')
-//         $.ajax({
-//             url: window.location.href,
-//             method: 'GET',
-//             dataType: 'json',
-//             success: function(response) {
-//                 console.log('Ответ от сервера принят')
-//                 console.log(response)
-//                 response_to_html(response);
-//                 main_function();
-//             },
-//             error: function(xhr, status, error) {
-//                 console.error(`Error: ${xhr}, ${status}, ${error}`);
-//                 main_function();
-//             },
-//         });
-//     });
-
-//     $(window).off('beforeunload').on('beforeunload', (e)=>{
-//         console.log('Предотвращена попытка перезагруки страницы')
-
-//         $.ajax({
-//             url: window.location.href,
-//             method: 'GET',
-//             dataType: 'json',
-//             success: function(response) {
-//                 console.log('Ответ от сервера принят')
-//                 console.log(response)
-//                 response_to_html(response);
-//                 main_function();
-//             },
-//             error: function(xhr, status, error) {
-//                 console.error(`Error: ${xhr}, ${status}, ${error}`);
-//                 main_function();
-//             },
-//         });
-//     });
-// };
