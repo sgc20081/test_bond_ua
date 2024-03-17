@@ -1,3 +1,4 @@
 .env
+deployment.yaml
 db.sqlite3
 Dockerfile
