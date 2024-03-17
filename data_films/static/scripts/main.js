@@ -1,7 +1,7 @@
 $(document).ready(function() {
 
     movies_api_url = new UrlParametres(`${window.location.origin}/movies-api`);
-    progress_loader = new LoadingAnimation({parent_el: $('.movies_rows'), text: 'Загрузка списка фильмов'});
+    progress_loader = new LoadingAnimation({parent_el: $('.loader_bar'), text: 'Загрузка списка фильмов'});
     
     movies_api_request();
     main_function();
@@ -12,6 +12,11 @@ $(document).ready(function() {
 // Class for interacting with GET parameters
 
 class UrlParametres {
+    /**
+     * @param {str} url
+     * Initiate an object with a link with parameters to manage them, 
+     * or with a link without parameters to add parameters
+     */
     constructor(url) {
         
         this.original_url = url;
@@ -145,10 +150,6 @@ class UrlParametres {
         $.each(this.params, (key, value)=>{
             delete this[key];
         });
-        // this.params = {};
-        // this.params_str = '';
-        // this.original_url = this.cleaned_url;
-        // this.url = this.cleaned_url;
         this.__init__();
         return this;
     }
@@ -169,11 +170,11 @@ class LoadingAnimation {
         this.state = '';
 
         this.original_loader_el = $(`<p>${this.text}</p>`);
-        this.loader_el = this.original_loader_el;
+        this.loader_el = this.original_loader_el.clone();
     }
 
     __set_html_loader__() {
-        this.parent_el.html(`<br>${this.loader_el.html()}<br>`);
+        this.parent_el.append(this.loader_el);
     };
 
     start_animation() {
@@ -196,16 +197,18 @@ class LoadingAnimation {
             }
             else {
                 i = 0;
-                this.loader_el = $(`<p>${this.text}</p>`);
+                this.loader_el.remove();
+                this.loader_el = this.original_loader_el.clone();
                 this.__set_html_loader__();
                 animate();
-            }
+            };
         };
         animate();
     };
 
     stop_animation() {
         this.state = false;
+        this.loader_el.remove();
     };
 };
 
