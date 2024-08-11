@@ -11,27 +11,43 @@ from .forms import  DirectorForm, ActorForm
 class MovieListView(TemplateView):
     template_name = 'movie_list_view.html'
 
-class MovieCreateView(CreateView):
-    model = Movie
-    template_name = 'movie_create_view.html'
-    fields = ['movie_title', 'movie_date', 'movie_director', 'movie_actors']
-    success_url = '/'
-
-class MovieDetailView(DetailView):
-    model = Movie
+class MovieDetailView(TemplateView):
     template_name = 'movie_detail_view.html'
-    object = 'movie'
 
-class MovieUpdateView(UpdateView):
-    model = Movie
+class MovieCreateView(TemplateView):
     template_name = 'movie_create_view.html'
-    fields = ['movie_title', 'movie_date', 'movie_director', 'movie_actors']
-    success_url = reverse_lazy('home')
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['update'] = True
-        return context
+class MovieUpdateView(TemplateView):
+    template_name = 'movie_create_view.html'
+
+# class MovieUpdateView(UpdateView):
+#     model = Movie
+#     template_name = 'movie_create_view.html'
+#     fields = ['movie_title', 'movie_date', 'movie_director', 'movie_actors']
+#     success_url = reverse_lazy('home')
+
+# class MovieCreateView(CreateView):
+#     model = Movie
+#     template_name = 'movie_create_view.html'
+#     fields = ['movie_title', 'movie_date', 'movie_director', 'movie_actors']
+#     success_url = '/'
+
+# class MovieDetailView(DetailView):
+#     model = Movie
+#     template_name = 'movie_detail_view.html'
+#     object = 'movie'
+
+
+
+    # def get_context_data(self, **kwargs):
+    #     context = super().get_context_data(**kwargs)
+    #     print(kwargs)
+    #     print(self.kwargs['pk'])
+    #     context['update'] = True
+    #     context['movie'] = Movie.objects.get(id=self.kwargs['pk'])
+    #     context['directors'] = Director.objects.all()
+    #     context['actors'] = Actor.objects.all()
+    #     return context
 
     def get_success_url(self):
         return reverse_lazy('movie-detail', kwargs={'pk': self.object.pk})

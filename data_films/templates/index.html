@@ -12,6 +12,8 @@
 </head>
 <body>
     {% block body %}{% endblock %}
+    {% load static %}
+    <script src="{% static 'scripts/apis_requests_send_class.js' %}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

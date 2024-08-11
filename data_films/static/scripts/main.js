@@ -222,6 +222,8 @@ function main_function() {
     pagination_event();
     filters_movies_api_request();
     reset_filters();
+
+    obj_detail_links_treatment();
 };
 
 function movies_api_request() {
@@ -356,17 +358,17 @@ function response_to_html(response) {
 
         let director_html = '';
         $.each(movie.movie_director, (ind, director)=>{
-            director_html += `<a href="director-${director.id}">${director.director_name }</a><br>`
+            director_html += `<a object_id="${director.id}" href="director-${director.id}">${director.director_name}</a><br>`
         });
 
         let actor_html = '';
         $.each(movie.movie_actors, (ind, actor)=>{
-            actor_html += `<a href="actor-${actor.id}">${actor.actor_name}</a><br>`
+            actor_html += `<a object_id="${actor.id}" href="actor-${actor.id}">${actor.actor_name}</a><br>`
         });
         
         let movie_html = `
             <tr class="movie_row">
-            <td><a href="movie-${movie.id}">${movie.movie_title }</a></td>
+            <td><a object_id="${movie.id}" href="movie-${movie.id}">${movie.movie_title }</a></td>
             <td>${movie.movie_date}</td>
             <td>
                 ${director_html}
@@ -434,6 +436,24 @@ function pagination_event() {
                     main_function();
                 },
             });
+        });
+    });
+};
+
+function obj_detail_links_treatment(){
+    let links = $('.movies_rows a');
+
+    $.each(links, (ind, link)=>{
+
+        link = $(link);
+
+        link.on('click', function(e){
+            e.preventDefault();
+            
+            sessionStorage.setItem('request_object_id', link.attr('object_id'));
+            sessionStorage.setItem('request_object_url', link.attr('href'));
+            
+            window.location.href = this.href;
         });
     });
 };

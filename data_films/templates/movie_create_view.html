@@ -10,36 +10,32 @@
 
 {% block body %}
 {% if update %}
-<h1>{{ object.movie_title }} - Редактирование</h1>
+    <h1>{{ movie }} - Редактирование</h1>
 {% else %}
-<h1>Добавить новый фильм</h1>
+    <h1>Добавить новый фильм</h1>
 {% endif %}
-    <form action="" method="post">
+    <form class="api-form create-movie-api-form" action="" method="post">
         <table>
             <tbody>
                 {% csrf_token %}
                 <tr>
                     <td>Название фильма: </td>
-                    <td>{{ form.movie_title }}</td>
+                    <td><input type="text" name="movie_title" maxlength="20" required="" id="id_movie_title"></td>
                 </tr>
                 <tr>
                     <td>Дата выхода: </td>
-                    <td><input type="date" name="movie_date" value="{{ object.movie_date|date:'Y-m-d' }}" required="" aria-invalid="true" id="id_movie_date"></td>
+                    <td><input type="date" name="movie_date" value="{{ object.movie_date|date:'d-m-Y' }}" required="" aria-invalid="true" id="id_movie_date"></td>
                 </tr>
                 <tr>
                     <td>Режиссёр: </td>
                     <td>
-                        <select name="movie_director" required="" id="id_movie_director">
-                            {% for director in form.movie_director %}
-                                {{ director }}
-                            {% endfor %}
-                        </select>
+                        <select name="movie_directors" required="" id="id_movie_director"></select>
                     </td>
                 </tr>
                 <tr>
                     <td>Актёры: </td>
                     <td>
-                        {{ form.movie_actors }}
+                        <select id="id_movie_actors" name="movie_actors" required="" multiple=""></select>
                     </td>
                 </tr>
             </tbody>
@@ -50,4 +46,8 @@
         <button type="submit">Добавить фильм</button>
     {% endif %}
     </form>
+{% endblock %}
+{% block scripts %}
+    {% load static %}
+    <script src="{% static 'scripts/apis_requests.js' %}"></script>
 {% endblock %}

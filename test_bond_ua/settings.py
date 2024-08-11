@@ -143,7 +143,7 @@ USE_TZ = True
 #     os.path.join(BASE_DIR, 'data_films', 'static'),
 # ]
 
-STATIC_ROOT = BASE_DIR / 'static'
+# STATIC_ROOT = BASE_DIR / 'static'
 STATIC_URL = 'static/'
 
 # Default primary key field type

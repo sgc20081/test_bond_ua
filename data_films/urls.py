@@ -25,5 +25,12 @@ urlpatterns = [
 
 # API urls
 urlpatterns += [
-    path('movies-api', apis.MovieList.as_view()),
+    path('movies-api', apis.MovieListAPI.as_view()),
+    path('directors-api', apis.DirectorListAPI.as_view()),
+    path('actors-api', apis.ActorListAPI.as_view()),
+    path('create-movie-api', apis.MovieCreateAPI.as_view()),
+    path('update-movie-api', apis.MovieUpdateAPI.as_view()),
+
+    re_path(r'^api/movie-(?P<pk>\d+)$', apis.MovieDetailAPI.as_view()),
+    re_path(r'^api/update-movie-(?P<pk>\d+)$', apis.MovieUpdateAPI.as_view()),
 ]
