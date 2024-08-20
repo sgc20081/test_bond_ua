@@ -3,9 +3,12 @@ $(document).ready(function() {
     movies_api_url = new UrlParametres(`${window.location.origin}/movies-api`);
     progress_loader = new LoadingAnimation({parent_el: $('.loader_bar'), text: 'Загрузка списка фильмов'});
     
-    movies_api_request();
-    main_function();
+    // movies_api_request();
+    // main_function();
+    // console.log('Test')
 });
+
+// var movies;
 
 
 // ===================================================================================
@@ -219,241 +222,244 @@ let url = '';
 let progress_loader = '';
 
 function main_function() {
-    pagination_event();
-    filters_movies_api_request();
-    reset_filters();
+    // pagination_event();
+    // filters_movies_api_request();
+    // reset_filters();
 
-    obj_detail_links_treatment();
+    // obj_detail_links_treatment();
 };
 
-function movies_api_request() {
+// function movies_api_request() {
     
-    progress_loader.start_animation()
+//     progress_loader.start_animation()
 
-    $.ajax({
-        url: movies_api_url.url,
-        method: 'GET',
-        dataType: 'json',
-        success: (response)=>{
-            
-            progress_loader.stop_animation();
-            response_to_html(response);
-            main_function();
-        },
-        error: (xhr, status, error)=>{
-            console.error(`AJAX error: ${xhr}, ${status}, ${error}`);
-            main_function();
-        },
-    })
-}
+//     $.ajax({
+//         url: movies_api_url.url,
+//         method: 'GET',
+//         dataType: 'json',
+//         success: (response)=>{
+//             progress_loader.stop_animation();
+//             movies = {};
+//             movies.object = response;
+//             console.log(movies);
+//             custom_tags_class.tag_processing();
+//             // response_to_html(response);
+//             // main_function();
+//         },
+//         error: (xhr, status, error)=>{
+//             console.error(`AJAX error: ${xhr}, ${status}, ${error}`);
+//             // main_function();
+//         },
+//     })
+// }
 
-function filters_movies_api_request() {
-    let accept_btn = $('.accept-filters-btn');
-    let resest_btn = $('.reset-filters-btn');
-    let filters_inputs = $('.movie-filters input');
+// function filters_movies_api_request() {
+//     let accept_btn = $('.accept-filters-btn');
+//     let resest_btn = $('.reset-filters-btn');
+//     let filters_inputs = $('.movie-filters input');
     
-    $.each(filters_inputs, (ind, input)=>{
-        $(input).off('input').on('input', ()=>{
+//     $.each(filters_inputs, (ind, input)=>{
+//         $(input).off('input').on('input', ()=>{
             
-            let inputs_filled = []
+//             let inputs_filled = []
 
-            $.each(filters_inputs, (ind, input)=> {
-                if($(input).val() != '') {
-                    inputs_filled.push(true)
-                }
-                else {
-                    inputs_filled.push(false)
-                }
-            });
+//             $.each(filters_inputs, (ind, input)=> {
+//                 if($(input).val() != '') {
+//                     inputs_filled.push(true)
+//                 }
+//                 else {
+//                     inputs_filled.push(false)
+//                 }
+//             });
             
-            if (inputs_filled.includes(true)) {
-                accept_btn.prop('disabled', false);
-                resest_btn.prop('disabled', false);
-            }
-            else {
-                accept_btn.prop('disabled', true);
-                resest_btn.prop('disabled', true);
-            }
-        });
-    });
+//             if (inputs_filled.includes(true)) {
+//                 accept_btn.prop('disabled', false);
+//                 resest_btn.prop('disabled', false);
+//             }
+//             else {
+//                 accept_btn.prop('disabled', true);
+//                 resest_btn.prop('disabled', true);
+//             }
+//         });
+//     });
 
-    accept_btn.off('click').on('click', ()=>{
-        let params = {}
+//     accept_btn.off('click').on('click', ()=>{
+//         let params = {}
         
-        movies_api_url.delete_all_params();
+//         movies_api_url.delete_all_params();
         
-        $.each(filters_inputs, (ind, input)=>{
-            if($(input).val() != '') {
-                params[$(input).attr('param')] = $(input).val();
-            }
-        });
+//         $.each(filters_inputs, (ind, input)=>{
+//             if($(input).val() != '') {
+//                 params[$(input).attr('param')] = $(input).val();
+//             }
+//         });
 
-        movies_api_url.add_params(params)
+//         movies_api_url.add_params(params)
 
-        progress_loader.start_animation();
+//         progress_loader.start_animation();
 
-        $.ajax({
-            url: movies_api_url.url,
-            method: 'GET',
-            dataType: 'json',
-            success: (response)=>{
+//         $.ajax({
+//             url: movies_api_url.url,
+//             method: 'GET',
+//             dataType: 'json',
+//             success: (response)=>{
                 
-                progress_loader.stop_animation();
-                response_to_html(response);
+//                 progress_loader.stop_animation();
+//                 response_to_html(response);
 
-                if (response.results.length == 0){
-                    $('.movies_rows').html('<p><b>Совпадений не найдено<b></p>');
-                };
+//                 if (response.results.length == 0){
+//                     $('.movies_rows').html('<p><b>Совпадений не найдено<b></p>');
+//                 };
 
-                main_function();
-            },
-            error: (xhr, status, error)=>{
-                console.error(`AJAX error: ${xhr}, ${status}, ${error}`);
-                main_function();
-            },
-        })
-    })
-}
+//                 main_function();
+//             },
+//             error: (xhr, status, error)=>{
+//                 console.error(`AJAX error: ${xhr}, ${status}, ${error}`);
+//                 main_function();
+//             },
+//         })
+//     })
+// }
 
-function reset_filters() {
-    let accept_btn = $('.accept-filters-btn');
-    let resest_btn = $('.reset-filters-btn');
-    let filters_inputs = $('.movie-filters input');
+// function reset_filters() {
+//     let accept_btn = $('.accept-filters-btn');
+//     let resest_btn = $('.reset-filters-btn');
+//     let filters_inputs = $('.movie-filters input');
 
-    resest_btn.off('click').on('click', ()=>{
+//     resest_btn.off('click').on('click', ()=>{
 
-        movies_api_url.delete_all_params();
+//         movies_api_url.delete_all_params();
 
-        $.each(filters_inputs, (ind, input)=>{
-            $(input).val('');
-            accept_btn.prop('disabled', true);
-            resest_btn.prop('disabled', true);
-        })
+//         $.each(filters_inputs, (ind, input)=>{
+//             $(input).val('');
+//             accept_btn.prop('disabled', true);
+//             resest_btn.prop('disabled', true);
+//         })
 
-        progress_loader.start_animation();
+//         progress_loader.start_animation();
 
-        $.ajax({
-            url: movies_api_url.cleaned_url,
-            method: 'GET',
-            dataType: 'json',
-            success: function(response) {
+//         $.ajax({
+//             url: movies_api_url.cleaned_url,
+//             method: 'GET',
+//             dataType: 'json',
+//             success: function(response) {
 
-                progress_loader.stop_animation();
-                response_to_html(response);
-                main_function();
-            },
-            error: function(xhr, status, error) {
-                console.error('Error: ', xhr, status, error);
-                main_function();
-            }
-        })
-    });
-};
+//                 progress_loader.stop_animation();
+//                 // response_to_html(response);
+//                 main_function();
+//             },
+//             error: function(xhr, status, error) {
+//                 console.error('Error: ', xhr, status, error);
+//                 main_function();
+//             }
+//         })
+//     });
+// };
 
-function response_to_html(response) {
-    let tbody = $('.movies_rows');
-    tbody.html('');
+// function response_to_html(response) {
+//     let tbody = $('.movies_rows');
+//     tbody.html('');
 
-    $.each(response.results, function(ind, movie){
+//     $.each(response.results, function(ind, movie){
 
-        let director_html = '';
-        $.each(movie.movie_director, (ind, director)=>{
-            director_html += `<a object_id="${director.id}" href="director-${director.id}">${director.director_name}</a><br>`
-        });
+//         let director_html = '';
+//         $.each(movie.movie_directors, (ind, director)=>{
+//             director_html += `<a object_id="${director.id}" href="?api_url=director-${director.id}">${director.director_name}</a><br>`
+//         });
 
-        let actor_html = '';
-        $.each(movie.movie_actors, (ind, actor)=>{
-            actor_html += `<a object_id="${actor.id}" href="actor-${actor.id}">${actor.actor_name}</a><br>`
-        });
+//         let actor_html = '';
+//         $.each(movie.movie_actors, (ind, actor)=>{
+//             actor_html += `<a object_id="${actor.id}" href="?api_url=actor-${actor.id}">${actor.actor_name}</a><br>`
+//         });
         
-        let movie_html = `
-            <tr class="movie_row">
-            <td><a object_id="${movie.id}" href="movie-${movie.id}">${movie.movie_title }</a></td>
-            <td>${movie.movie_date}</td>
-            <td>
-                ${director_html}
-            </td>
-            <td>
-                ${actor_html}
-            </td>
-            </tr>`;
+//         let movie_html = `
+//             <tr class="movie_row">
+//             <td><a object_id="${movie.id}" href="?api_url=movie-${movie.id}">${movie.movie_title }</a></td>
+//             <td>${movie.movie_date}</td>
+//             <td>
+//                 ${director_html}
+//             </td>
+//             <td>
+//                 ${actor_html}
+//             </td>
+//             </tr>`;
         
-        tbody.html(tbody.html() + movie_html);
-    })
+//         tbody.html(tbody.html() + movie_html);
+//     })
     
-    let pagination = $('.step_links');
-    let pagination_html = '';
+//     let pagination = $('.step_links');
+//     let pagination_html = '';
 
-    if(response.page > 1) {
-        pagination_html += `
-        <a class="paginator-link" page_number="1" href="#">&laquo; первая</a>
-        <a class="paginator-link" page_number="${response.page-1 }" href="#">предыдущая</a>`;
-    }
-    pagination_html += `
-    <span class="current">
-        Страница ${response.page} из ${response.last_page}.
-    </span>`;
+//     if(response.page > 1) {
+//         pagination_html += `
+//         <a class="paginator-link" page_number="1" href="#">&laquo; первая</a>
+//         <a class="paginator-link" page_number="${response.page-1 }" href="#">предыдущая</a>`;
+//     }
+//     pagination_html += `
+//     <span class="current">
+//         Страница ${response.page} из ${response.last_page}.
+//     </span>`;
 
-    if (response.page != response.last_page) {
-        pagination_html += `
-        <a class="paginator-link" page_number="${response.page+1}" href="#">следующая</a>
-        <a class="paginator-link" page_number="${response.last_page}" href="#">последняя &raquo;</a>`;
-    }
+//     if (response.page != response.last_page) {
+//         pagination_html += `
+//         <a class="paginator-link" page_number="${response.page+1}" href="#">следующая</a>
+//         <a class="paginator-link" page_number="${response.last_page}" href="#">последняя &raquo;</a>`;
+//     }
 
-    pagination_html += `
-    <span class="page_number" page_number="${response.page}" style="display: none;"></span>`;
+//     pagination_html += `
+//     <span class="page_number" page_number="${response.page}" style="display: none;"></span>`;
 
-    pagination.html(pagination_html);
-};
+//     pagination.html(pagination_html);
+// };
 
-function pagination_event() {
+// function pagination_event() {
 
-    let paginator_link = $('.paginator-link');
+//     let paginator_link = $('.paginator-link');
 
-    $.each(paginator_link, (ind, link)=>{
+//     $.each(paginator_link, (ind, link)=>{
 
-        let page = $(link).attr('page_number');
+//         let page = $(link).attr('page_number');
 
-        $(link).on('click', (e)=>{
-            e.preventDefault();
+//         $(link).on('click', (e)=>{
+//             e.preventDefault();
 
-            movies_api_url.add_params({'page': page});
+//             movies_api_url.add_params({'page': page});
 
-            progress_loader.start_animation();
+//             progress_loader.start_animation();
 
-            $.ajax({
-                url: movies_api_url.url,
-                method: 'GET',
-                dataType: 'json',
-                success: function(response) {
+//             $.ajax({
+//                 url: movies_api_url.url,
+//                 method: 'GET',
+//                 dataType: 'json',
+//                 success: function(response) {
                     
-                    progress_loader.stop_animation();
-                    response_to_html(response);
-                    main_function();
-                },
-                error: function(xhr, status, error) {
-                    console.error(`Error: ${xhr}, ${status}, ${error}`);
-                    main_function();
-                },
-            });
-        });
-    });
-};
+//                     progress_loader.stop_animation();
+//                     response_to_html(response);
+//                     main_function();
+//                 },
+//                 error: function(xhr, status, error) {
+//                     console.error(`Error: ${xhr}, ${status}, ${error}`);
+//                     main_function();
+//                 },
+//             });
+//         });
+//     });
+// };
 
-function obj_detail_links_treatment(){
-    let links = $('.movies_rows a');
+// function obj_detail_links_treatment(){
+//     let links = $('.movies_rows a');
 
-    $.each(links, (ind, link)=>{
+//     $.each(links, (ind, link)=>{
 
-        link = $(link);
+//         link = $(link);
 
-        link.on('click', function(e){
-            e.preventDefault();
+//         link.on('click', function(e){
+//             e.preventDefault();
             
-            sessionStorage.setItem('request_object_id', link.attr('object_id'));
-            sessionStorage.setItem('request_object_url', link.attr('href'));
+//             sessionStorage.setItem('request_object_id', link.attr('object_id'));
+//             sessionStorage.setItem('request_object_url', link.attr('href'));
             
-            window.location.href = this.href;
-        });
-    });
-};
+//             window.location.href = this.href;
+//         });
+//     });
+// };

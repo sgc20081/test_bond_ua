@@ -24,26 +24,6 @@ class MovieListAPI(generics.ListCreateAPIView):
     filterset_class = MovieFilter
     filter_backends = [filters.DjangoFilterBackend]
 
-class DirectorListAPI(generics.ListCreateAPIView):
-    queryset = Director.objects.all()
-    serializer_class = DirectorSerializer
-    renderer_classes = [renderers.JSONRenderer]
-
-    # def get(self, request, *args, **kwargs):
-    #     context = super().get(request, *args, **kwargs)
-    #     for field in Director._meta.get_fields():
-    #         if not isinstance(field, models.ManyToManyRel):
-    #             print(field.name)
-    #         else:
-    #             print('This is ManyToMany field')
-    #     print(context.data)
-    #     return context
-
-class ActorListAPI(generics.ListCreateAPIView):
-    queryset = Actor.objects.all()
-    serializer_class = ActorSerializer
-    renderer_classes = [renderers.JSONRenderer]
-
 class MovieCreateAPI(generics.CreateAPIView):
     serializer_class = MovieSerializer
     renderer_classes = [renderers.JSONRenderer]
@@ -64,7 +44,7 @@ class MovieCreateAPI(generics.CreateAPIView):
 
             # Устанавливаем связи many-to-many
             if directors:
-                movie.movie_director.set(director['id'] for director in directors)
+                movie.movie_directors.set(director['id'] for director in directors)
             if actors:
                 movie.movie_actors.set(actor['id'] for actor in actors)
 
@@ -83,3 +63,23 @@ class MovieUpdateAPI(generics.UpdateAPIView):
 class MovieDetailAPI(generics.RetrieveAPIView):
     queryset = Movie.objects.all()
     serializer_class = MovieSerializer
+
+class DirectorListAPI(generics.ListCreateAPIView):
+    queryset = Director.objects.all()
+    serializer_class = DirectorSerializer
+    renderer_classes = [renderers.JSONRenderer]
+
+    # def get(self, request, *args, **kwargs):
+    #     context = super().get(request, *args, **kwargs)
+    #     for field in Director._meta.get_fields():
+    #         if not isinstance(field, models.ManyToManyRel):
+    #             print(field.name)
+    #         else:
+    #             print('This is ManyToMany field')
+    #     print(context.data)
+    #     return context
+
+class ActorListAPI(generics.ListCreateAPIView):
+    queryset = Actor.objects.all()
+    serializer_class = ActorSerializer
+    renderer_classes = [renderers.JSONRenderer]

@@ -1,15 +1,11 @@
-class ObjectToHTML {
-    constructor() {
-        this.html = document.getElementsByTagName('html')[0].innerHTML;
-        this.new_html = this.html;
-
+class CustomTag{
+    constructor(){
+        this.html = document.getElementsByTagName('html')[0].outerHTML;
         this.tags_list = {};
         this.processed_function_tags = [];
-
-        this.some_list = [];
         this.invalid_functions_tags = [];
 
-        this.html_cleaning();
+        this.new_html = this.html;
     }
 
     /**
@@ -22,330 +18,443 @@ class ObjectToHTML {
      * in which it performs the search, outside the main HTML code of the page.
      * @ Returns an array containing the found tags as objects.
      */
-    get_html_tags_list(tag_type, source_html=null) {
+    get_html_tags_list(tag_type, parent_tag=null, cleaning=null) {
         let self = this;
-        let last_processed_tag_index = 0;
-        let opening_tag_character;
-        let closing_tag_character;
+        let source_html;
+        let last_tag_index = 0;
+        let opening_tag_symbol;
+        let closing_tag_symbol;
+        let index_number = 0;
         let __tags_list__ = [];
-
-        if (tag_type == '[['){
-            opening_tag_character = '[[';   closing_tag_character = ']]';
-        } else if (tag_type == '[%'){
-            opening_tag_character = '[%';   closing_tag_character = '%]';
+        
+        if (tag_type == 'variable' || tag_type == 'inner_variable'){
+            opening_tag_symbol = '[[';   closing_tag_symbol = ']]';
+        } else if (tag_type == 'function'){
+            opening_tag_symbol = '[%';   closing_tag_symbol = '%]';
         }
 
-        if (source_html == null){
+        if (parent_tag == null){
             source_html = this.html;
+        } else {
+            source_html = parent_tag.internal_html.original;
         }
+
+        // console.log(source_html)
 
         function recursion() {
-            let beginning_tag_index = source_html.indexOf(opening_tag_character, last_processed_tag_index+1);
-            let ending_tag_index = source_html.indexOf(closing_tag_character, last_processed_tag_index+1);
-                        
-            if (beginning_tag_index != -1 && ending_tag_index != -1){
-                let tag_element = source_html.slice(beginning_tag_index, ending_tag_index+2);
-                let tag_header_text = source_html.slice(beginning_tag_index+2, ending_tag_index);
 
-                tag_header_text = tag_header_text.replace(/^\s*/, '').replace(/\s*$/, '');
+            let tag = new Tag();
+            
+            tag.type = tag_type;
+            tag.symbol = opening_tag_symbol;
+            tag.index_number = index_number;
 
-                __tags_list__.push({beginning_tag_index, ending_tag_index, tag_element, tag_header_text});
+            tag.beginning_tag_index = source_html.indexOf(opening_tag_symbol, last_tag_index+1);
+            tag.ending_tag_index = source_html.indexOf(closing_tag_symbol, last_tag_index+1);
+            
+            last_tag_index = tag.ending_tag_index;
+                
+            if (tag.beginning_tag_index != -1 && tag.ending_tag_index != -1){
+                tag.element = source_html.slice(tag.beginning_tag_index, tag.ending_tag_index+2);
+                tag.element_text = source_html.slice(tag.beginning_tag_index+2, tag.ending_tag_index);
 
-                last_processed_tag_index = ending_tag_index;
+                tag.element_text = tag.element_text.replace(/^\s*/, '').replace(/\s*$/, '');
+                
+                if (tag.type == 'variable' || tag.type == 'inner_variable'){
+                    tag.header.list = tag.element_text.split('.');
+                } else if (tag.type == 'function') {
+                    tag.header.list = tag.element_text.split(' ');
+                }
+                
+                tag.ending_tag_index = tag.ending_tag_index + 2;
+                
+                if (!self.variable_is_global(tag) && tag.type == 'variable'){
+                    return recursion();
+                } else if (parent_tag != null) {
+                    
+                    if (tag.header.list[0] != parent_tag.header.dict.variable){
+                        return recursion();
+                    }
+                }
+
+                tag = self.tag_identification(tag);
+
+                index_number++;
+
+                __tags_list__.push(tag);
 
                 recursion();
             }
         }
         recursion();
-
         return __tags_list__;
     }
 
-    /**
-     * @param {list} __tags_list__
-     * @returns {list}
-     * @ This method takes an array of tags, unwraps it, and calls the content collection method for each tag.
-     * @ It also filters external tags in the global html from internal tags related to function tags.
-     * @ Returns an array of tags with the collected content.
-     */
-    get_tag_content(__tags_list__){
-
-        for (let i=0; i < __tags_list__.length; i++) {
-
-            let tag = __tags_list__[i];
-            tag['tag_header_text'] = tag.tag_header_text.split('.');
-            tag['content'] = this.get_html_tag_content(tag.tag_header_text);
-
-            if (tag['content'] === undefined) {
-                // this.some_list.push(tag);
-                __tags_list__.splice(i, 1);
-                i--;
-            }
+    tag_identification(tag){
+        if (tag.type == 'variable' || tag.type == 'inner_variable'){
+            tag = new VariableTag().get_properties(tag);
+        } else if (tag.type == 'function' && tag.header.list.length > 1){
+            tag = new FunctionOpenTag().get_properties(tag);
+        } else if (tag.type == 'function' && tag.header.list.length == 1){
+            tag = new FunctionEndTag().get_properties(tag);
+        } else {
+            throw new Error(`Failed to set tag type or syntax is invalid: ${tag.element}`);
         }
-        return __tags_list__;
+        return tag;
     }
 
-    /**
-     * @param {dict} tag
-     * @returns {list}
-     * @ This method is used to get the internal code of a function tag block.
-     * @ As a parameter, it takes a tag object containing information such as the index of the beginning of the block in the source html code, the index of the end of the tag declaring the function block, the name of the variable and the name of the source object.
-     * @ Returns an array containing the full code of the function tag block, inner text that does not contain the text of specific tags, and RegExp objects containing the declaring and closing tags of the function block.
-     */
-    get_function_tag_code(tag){
-        try{
-            let tag_header_list = tag.tag_header_text.split(' ');
-            tag['function_type'] = tag_header_list[0];
-
-            tag['tag_header_dict'] = {
-                                    'function_type': tag_header_list[0],
-                                    'variable': tag_header_list[1],
-                                    'operator': tag_header_list[2],
-                                    'iterable_variable': tag_header_list[3]
-                                    }
-
-            if (tag_header_list.length <= 1){
-                return;
-            }
-
-            let substring_search = this.html.slice(tag.beginning_tag_index, this.html.length);
-
-            let regexp_open_tag = new RegExp(`\\[%\\s*${tag.tag_header_text}\\s*%\\]`);
-            let regexp_close_tag = new RegExp(`\\[%\\s*end${tag.function_type}\\s*%\\]`);
-            
-            tag['match_open_tag'] = regexp_open_tag.exec(substring_search);
-            tag['match_close_tag'] = regexp_close_tag.exec(substring_search);
-            
-            if (tag.match_close_tag === null){
-                throw new Error(`No closing tag found for ${tag.tag_element}. Did you forget to use the [% end${tag.function_type} %]?`);
-            }
-
-            tag['full_html'] = substring_search.slice(tag.match_open_tag.index, tag.match_close_tag.index + tag.match_close_tag[0].length);
-            tag['internal_html'] = tag.full_html.slice(tag.match_open_tag.index + tag.match_open_tag[0].length, tag.match_close_tag.index);
-        } catch (error) {
-            tag.content = '';
-            this.invalid_functions_tags.push(tag);
-            console.error(error);
-            return tag;
-        } finally {
-            return tag;
+    variable_is_global(tag){
+        if (tag.header.list[0] in window){
+            return true;
+        } else {
+            return false;
         }
     }
 
     /**
-     * @param {string} tag_header_text 
-     * @returns {string}
+     * @param {object} tag
+     * @returns {string} tag_content
      * @ This method takes as a parameter a string that is a representation of an object in code, for example:
      * @ some_variable.some_propertie
      * @ Collects information from an object that was received from the server API and is located in the global area 
      * @ of ​​the JS code in the form of a variable identical to the text representation of the object.
      * @ Returns information as a string, or as an array if the iterable object contains the desired property
      */
-    get_html_tag_content(tag_header_text){
+    get_tag_content(variable_header_list, search_scope=null){
         let tag_content;
 
-        if (tag_header_text.length > 0 && tag_header_text[0] in window){           
-            
-            $.each(tag_header_text, (ind, variable)=>{
+        if (search_scope == null){
+            search_scope = window;
+        }
 
+        if (variable_header_list.length > 0 && variable_header_list[0] in search_scope){           
+            
+            $.each(variable_header_list, (ind, propertie)=>{
                 if (ind == 0){
-                    tag_content = window[`${variable}`].object;
+                    tag_content = search_scope[propertie];
                 } else {
-                    function array_recursion(tag_content_object_recursion){
-                        if (!Array.isArray(tag_content_object_recursion)){
-                            tag_content_object_recursion = tag_content_object_recursion[variable];
-                        } else {
-                            if (tag_content_object_recursion.length == 1){
-                                tag_content_object_recursion = tag_content_object_recursion[0][variable];
-                            } else {
-                                let related_objects_content_list = [];
-                                $.each(tag_content_object_recursion, (ind, related_object)=>{
-                                    related_objects_content_list.push(related_object[variable]);
-                                });
-                                return related_objects_content_list;
-                            }
-                        }
-                        return tag_content_object_recursion;
-                    }
-                    tag_content = array_recursion(tag_content);
+                    tag_content = tag_content[propertie];
                 }
             });
 
             if (tag_content === undefined){
                 tag_content = '';
             }
+
             return tag_content;
-        }
-    }
-
-    /**
-     * @param {object} tag 
-     * @returns {object}
-     */
-    standard_functions(tag){
-        if (tag.function_type = 'for'){
-            if (tag.tag_header_dict.operator != 'in'){
-                throw new Error(`Unexpected operator's value. ${tag.tag_element} recieved "${tag.tag_header_dict.operator}" instead of "in"`)
-            } else {
-                return this.processing_for_function(tag);
-            }
-        } else if (tag.function_type = 'if'){
-            // pass
         } else {
-            throw new Error('Unsuported function type: ', tag.function_type)
+            throw new Error(`Could not find variable ${variable_header_list[0]} in search scope ${search_scope}.`);
         }
     }
 
-    /**
-     * @param {object} tag 
-     * @returns {object}
-     */
-    processing_for_function(tag){
-        tag['full_html_with_content'] = '';
-        tag['content'] = '';
-        tag['inner_variables'];
-        
-        try{
-            let internal_tags_list = this.get_html_tags_list('[[', tag.internal_html);
-            let internal_tags_dict = {};
-            tag.tag_header_dict.iterable_variable_content = this.get_html_tag_content(tag.tag_header_dict.iterable_variable.split('.'));
-
-            if(!Array.isArray(tag.tag_header_dict.iterable_variable_content)){
-                tag.content = '';
-                throw new Error(`${tag.tag_header_dict.iterable_variable} is not iterable variable`);
-            }
-
-            // Идёт проверка каждого тега внутри html функции на соответствие переменной в заголовке тега
-            for (let i=0; i < internal_tags_list.length; i++){
-
-                let internal_tag = internal_tags_list[i];
-                let regex_variable = new RegExp(`^${tag.tag_header_dict.variable}(\\.|$)`);
-
-                if (regex_variable.exec(internal_tag.tag_header_text)) {
-                    let original_iterable_tag = internal_tag.tag_header_text.replace(regex_variable, tag.tag_header_dict.iterable_variable+'.');
-                    
-                    if (original_iterable_tag.lastIndexOf('.') == original_iterable_tag.length-1){
-                        original_iterable_tag = original_iterable_tag.slice(0, original_iterable_tag.length-1)
-                    }
-
-                    let tag_content = this.get_html_tag_content(original_iterable_tag.split('.'));
-
-                    if(!Array.isArray(tag_content)){
-                        tag_content = [tag_content]
-                    }
-
-                    internal_tags_dict[i] = tag_content;
-                }
-            }
-
-            for (let i=0; i < tag.tag_header_dict.iterable_variable_content.length; i++){
-
-                let html_block_content = tag.internal_html;
-                
-                $.each(internal_tags_dict, (ind, related_object_content)=>{
-                    html_block_content = html_block_content.replace(internal_tags_list[ind].tag_element, related_object_content[i]);
-                });
-
-                tag.content += html_block_content;
-                tag.full_html_with_content = tag.match_open_tag[0] + tag.content + tag.match_close_tag[0];
-                
-                tag.inner_variables = internal_tags_dict;
-            }
-        } catch (error) {
-            console.error(`Unexpected error with tag object: ${tag.tag_element}`, tag);
-            console.error(error);
-            tag.content = '';
-        } finally {
-            return tag;
-        }
-    }
-
-    /**
-     * @param {list} tags_list 
-     * @param {string} tag_type
-     */
     content_to_html(tags_list, tag_type){
         let self = this;
         if(tag_type == 'variable'){
             $.each(tags_list, (ind, tag)=>{
-                this.new_html = this.new_html.replace(tag.tag_element, tag.content);
+                this.new_html = this.new_html.replaceAll(tag.element, tag.content);
             });
         } else if (tag_type == 'function'){
             $.each(tags_list, (ind, tag)=>{
-                this.new_html = this.new_html.replace(tag.full_html, tag.content);
+                if (!tag.is_child){
+                    console.log(this.new_html.indexOf(tag.full_original_html))
+                    this.new_html = this.new_html.replaceAll(tag.full_original_html, tag.content.full);
+                } else {
+                    // console.log(`tag to html: `,tag)
+                }
             });
         }
+    }
+}
 
-        document.getElementsByTagName('html')[0].innerHTML = this.new_html;
+class Tag extends CustomTag {
+    constructor(...props){
+        super(...props)
+
+        this.type = '';
+        this.symbol = '';
+
+        this.beginning_tag_index = 0;
+        this.ending_tag_index = 0;
+
+        this.element = '';
+        this.element_text = '';
+
+        this.header = {list: []};
     }
 
-    cleaning_invalid_tags(){
-        let self = this;
-        let reg = /\[\[\s*.*?\s*\]\]/g;
-        let match = this.new_html.match(reg);
+    get_properties(tag_object){
+        let object = tag_object;
+        let new_object = this;
 
-        if (Array.isArray(match)){
-            $.each(match, (ind, tag)=>{
-                this.new_html = self.new_html.replace(tag, '')
+        function recursion(object, new_object){
+
+            $.each(object, (key, propertie)=>{
+                if(Object.prototype.toString.call(propertie) === '[object Object]'){
+                    new_object[key] = recursion(propertie, new_object[key])
+                } else {
+                    new_object[key] = propertie;
+                }
             });
+            return new_object;
         }
+        recursion(object, new_object);
+        return new_object;
+    }
+}
 
-        document.getElementsByTagName('html')[0].innerHTML = self.new_html;
+class VariableTag extends Tag {
+    constructor(...props){
+        super(...props);
+
+        this.content = '';
+    }
+}
+
+class FunctionTag extends Tag {
+    constructor(...props){
+        super(...props);
+
+        this.function_type = '';
+        this.tag_type = '';
+
+        this.index_number = 0;
+    }
+}
+
+class FunctionOpenTag extends FunctionTag {
+    constructor(...props){
+        super(...props);
+
+        this.content = {full: '',
+                        list: [],
+                        html_list: []
+                        };
+
+        this.header = {...super.header,
+                        dict: {function_type: '',
+                            }
+                        }
+
+        this.full_original_html = '';
+        
+        this.is_opentag = true;
+        this.endtag = [];
+
+        this.internal_html = {original: '',
+                            with_content_list: [],
+                            with_childs_content_list: []
+                            };
+
+        this.internal_variables_list = [];
+
+        this.is_parent = null
+        this.is_child = null;
+
+        this.child_tags = [];
+        this.parent_tag = [];
+    }
+}
+
+class CustomFunctionForTag extends FunctionOpenTag {
+    constructor(...props){
+        super(...props)
+
+        this.header = {...super.header,
+            dict: {function_type: '',
+                variable: '',
+                operator: '',
+                iterable_variable: '',
+                iterable_variable_list: []
+                }
+            }
     }
 
     /**
-     * @ A method that starts the process of processing variable tags and function tags, and substituting objects that correspond to them.
-     * @ The launch is carried out by running the:
-     * @ get_html_tags_variable() 
-     * @ and 
-     * @ get_html_tags_function() 
-     * @ methods.
+     * @param {object} tag 
+     * @returns {object}
      */
-    async tag_processing(){
-        this.new_html = this.html;
-        await this.get_html_tags_variable();
-        await this.get_html_tags_function();
-        this.cleaning_invalid_tags();
+    static processing_for_function(tag){
+        tag = CustomFunctionForTag.get_internal_tag_markup(tag);
+
+        if (tag.header.dict.operator != 'in'){
+            throw new Error(`Unexpected operator's value. ${tag.element} recieved "${tag.header.dict.operator}" instead of "in"`)
+        } else {
+            tag = CustomFunctionForTag.get_internal_variables(tag);
+            tag = CustomFunctionForTag.get_content_list(tag);
+            tag = CustomFunctionForTag.content_to_html_list(tag);
+        }
+        return tag;
+    }
+
+    static get_internal_tag_markup(tag){
+        tag.header.dict.variable = tag.header.list[1];
+        tag.header.dict.operator = tag.header.list[2];
+        tag.header.dict.iterable_variable = tag.header.list[3];
+        tag.header.dict.iterable_variable_list = tag.header.list[3].split('.');
+
+        return tag;
+    }
+
+    static get_internal_variables(tag){
+        console.log(tag)
+        tag.internal_variables_list = tag.get_html_tags_list('inner_variable', tag);
+        return tag;
+    }
+
+    static get_content_list(tag){
+        if(!tag.is_child){
+            tag.content.list = tag.get_tag_content(tag.header.dict.iterable_variable_list);
+            return tag;
+        } else if (tag.is_child) {
+            $.each(tag.parent_tag[0].content.list, (ind, parent_object)=>{
+                tag.content.list.push(tag.get_tag_content([tag.header.dict.iterable_variable_list[1]], parent_object));
+            });
+        }
+        return tag;
+    }
+
+    static content_to_html_list(tag){
+        let content_list = tag.content.list;
+
+        function object_to_html(object){
+            let html_with_content = tag.internal_html.original;
+
+            $.each(tag.internal_variables_list, (i, internal_variable)=>{
+                let content = tag.get_tag_content([internal_variable.header.list[1]], object)
+                html_with_content = html_with_content.replaceAll(internal_variable.element, content)
+            })
+
+            return html_with_content;
+        }
+
+        let recursion_on;
+        function recursion(content_list){
+            let html_with_content = '';
+            
+            $.each(content_list, (ind, object)=>{
+                if(Array.isArray(object)){
+                    recursion_on = true;
+                    recursion(object);
+                } else {
+                    if (recursion_on){
+                        html_with_content += object_to_html(object);
+                    } else {
+                        tag.internal_html.with_content_list.push(object_to_html(object));
+                    }
+                }
+            })
+
+            if (recursion_on){
+                tag.internal_html.with_content_list.push(html_with_content);
+            }
+            recursion_on = false
+        }
+        recursion(content_list);
+        return tag;
+    }
+}
+
+class CustomFunctionIfTag extends FunctionOpenTag {
+    constructor(...props){
+        super(...props)
+
+        this.if_operators = ['==', '!=']
+
+        this.header = {...super.header,
+                        dict: {function_type: '',
+                            variable_1: '',
+                            variable_2: '',
+                            iterable_variable: '',
+                            iterable_variable_list: []
+                            }
+                        }
+    }
+
+    /**
+     * @param {object} tag 
+     * @returns {object}
+     */
+    static processing_if_function(tag){
+        tag = CustomFunctionIfTag.get_internal_tag_markup(tag);
+        console.log('If tag: ', tag)
+        return tag;
+    }
+
+    static get_internal_tag_markup(tag){
+        tag.header.dict.variable_1 = tag.header.list[1];
+
+        if (tag.header.list.length > 2){
+            tag.header.dict.operator = tag.header.list[2];
+            tag.header.dict.variable_2 = tag.header.list[3];      
+        }
+
+        return tag;
+    }
+
+}
+
+class FunctionEndTag extends FunctionTag {
+    constructor(...props){
+        super(...props);
+        
+        this.is_endtag = true;
+        this.opentag = [];
+    }
+}
+
+class CustomVariableTag extends CustomTag{
+    constructor(...props){
+        super(...props);
     }
 
     async get_html_tags_variable(){
         let self = this;
         return new Promise((resolve, reject)=>{
-            let last_processed_tag_index = 0;
-            let tag_type = '[['; 
+            let tags_list = this.get_html_tags_list('variable');
     
-            let __tags_list__ = this.get_html_tags_list(tag_type);
+            $.each(tags_list, (ind, tag)=>{
+                try{
+                    tag['content'] = this.get_tag_content(tag.header.list);
+                } catch (error) {
+                    console.error(error);
+                }
+            })
 
-            let tags_content_list = this.get_tag_content(__tags_list__);
-            this.tags_list['variables'] = tags_content_list;
-            this.content_to_html(tags_content_list, 'variable');
+            this.tags_list['variables'] = tags_list;
+            this.content_to_html(tags_list, 'variable');
             resolve();
         });
     }
-    
-    async get_html_tags_function() {
+}
+
+class CustomFunctionTag extends CustomVariableTag{
+    constructor(...props){
+        super(...props)
+    }
+
+    async get_html_tags_function(){
         let self = this;
         return new Promise((resolve, reject)=>{
             try {
-                let length_correction = 0;
-                let tag_type = '[%';
-                let __tags_list__ = this.get_html_tags_list(tag_type);
+                let tags_list = this.get_html_tags_list('function');
+                tags_list = this.set_tag_dependencies(tags_list);
+                
+                for (let i=0; i < tags_list.length; i++){
+                    let tag = tags_list[i]
 
-                $.each(__tags_list__, (ind, tag)=>{
-                    try {
-                        if (tag.tag_header_text.indexOf(' ') != -1){
-                            tag = this.get_function_tag_code(tag);
-                            //Здесь вставить функцию выбора типа функции
-                            tag = this.standard_functions(tag)
-                            this.processed_function_tags.push(tag);
-                        }
-                    } catch (error) {
-                        console.error(error)
-                    } finally {
-                        this.content_to_html(this.processed_function_tags, 'function');
-                        this.tags_list['functions'] = this.processed_function_tags;
+                    if (tag.is_endtag){
+                        tags_list.splice(i, 1);
+                        i--;
+                    } else {
+                        tag = this.get_function_tag_code(tag);
+                        tag = this.standard_functions(tag);
                     }
-                });
+                }
+
+                tags_list = this.child_content_to_parent(tags_list);
+                this.content_to_html(tags_list, 'function');
+
+                this.tags_list['functions'] = this.processed_function_tags;
             } catch (error) {
                 console.error(error);
             } finally {
@@ -354,48 +463,271 @@ class ObjectToHTML {
         })
     }
 
-    html_cleaning(){
-        let variables_tags = this.get_html_tags_list('\[\[');
-        let functions_tags = this.get_html_tags_list('[%');
-        
-        try {
-            for (let i=0; i<functions_tags.length; i++){
-                let tag = functions_tags[i];
-                let tag_code = this.get_function_tag_code(tag);
-    
-                if (tag_code == undefined){
-                    functions_tags.splice(i, 1);
-                    i--;
-                    continue;
+    set_tag_dependencies(tags_list){
+        for (let ind=0; ind < tags_list.length; ind++){
+            let tag = tags_list[ind];
+            let open_tags_count = 0;
+            let close_tags_count = 0;
+
+            if (tag.is_opentag){
+                open_tags_count++;
+
+                let i = ind;
+                function recursion(){
+
+                    if (open_tags_count != close_tags_count && tags_list[i+1] === undefined){
+                        throw new Error(`No closing tag found for ${tag.element}. Did you forget to put the [% end${tag.function_type} %] closing tag?`)
+                    }
+
+                    if (tags_list[i+1].is_endtag){
+
+                        close_tags_count++;
+                        if (open_tags_count == close_tags_count){
+                            tag.endtag[0] = tags_list[i+1];
+                            tags_list[i+1].opentag[0] = tag;
+                            
+                            return;
+                        } else {
+                            i++
+                            return recursion();
+                        }
+                    } else if (tags_list[i+1].is_opentag){
+                        tag.is_parent = true;
+                        tag.child_tags.push(tags_list[i+1]);
+                        
+                        tags_list[i+1].is_child = true;
+                        tags_list[i+1].parent_tag[0] = tag;
+                        
+                        i++;
+                        open_tags_count++;
+                        return recursion();
+                    }
                 }
-                
-                tag['content'] = '';
+                recursion();
+            } else if (tag.is_endtag) {
+                close_tags_count++;
             }
-    
-            for (let i=0; i<variables_tags.length; i++){
-                variables_tags[i]['content'] = '';
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            this.content_to_html(functions_tags, 'function');
-            this.content_to_html(variables_tags, 'variable');
         }
+        return tags_list;
+    }
+
+    get_function_tag_code(tag, source_html=null){
+        let self = this;
+
+        try{
+            if (tag.is_endtag){
+                return;
+            }
+
+            let html = this.html;
+            if(source_html != null){
+                html = source_html;
+            }
+
+            tag.header.dict.function_type = tag.header.list[0];
+
+            tag.function_type = tag.header.list[0];
+
+            tag.full_original_html = this.html.slice(tag.beginning_tag_index, tag.endtag[0].ending_tag_index);
+            tag.internal_html.original = this.html.slice(tag.ending_tag_index, tag.endtag[0].beginning_tag_index);
+
+            if (tag.endtag[0] === null){
+                throw new Error(`No closing tag found for ${tag.tag_element}. Did you forget to use the [% end${tag.function_type} %]?`);
+            }
+
+        } catch (error) {
+            tag.content = '';
+            this.invalid_functions_tags.push(tag);
+            console.error(error);
+            return tag;
+        } finally {
+            return tag;
+        }        
+    }
+
+    /**
+     * @param {object} tag 
+     * @returns {object}
+     */
+    standard_functions(tag){
+        let self = this;
+        if (tag.function_type == 'for'){
+            tag = CustomFunctionForTag.processing_for_function(tag);
+        } else if (tag.function_type == 'if'){
+            tag = CustomFunctionIfTag.processing_if_function(tag);
+            // console.warn('The "if" function handling is not yet written');
+        } else {
+            throw new Error('Unsuported function type: ', tag.function_type)
+        }
+        return tag;
+    }
+
+    child_content_to_parent(tags_list){
+
+        function recursion(tags_list){
+
+            $.each(tags_list, (index, tag)=>{
+
+                if(tag.is_parent){
+
+                    $.each(tag.child_tags, (ind, child_tag)=>{
+
+                        if(child_tag.is_parent){
+                            recursion(child_tag.child_tags);
+                        }
+
+                    })
+
+                    $.each(tag.internal_html.with_content_list, (i, parent_html)=>{
+
+                        $.each(tag.child_tags, (j, child_tag)=>{
+                            parent_html = parent_html.replace(child_tag.full_original_html, child_tag.internal_html.with_content_list[i]);
+                        })
+                        tag.content.full += parent_html;
+                    })
+                }
+            });
+        }
+        recursion(tags_list);
+        return tags_list;
+    }
+
+    // list_content_to_string(list_content){
+    //     if(Array.isArray(list_content)){
+    //         let string_content = '';
+    //         $.each(list_content, (ind, content)=>{
+    //             string_content += content;
+    //         })
+    //         return string_content;
+    //     } else {
+    //         return list_content;
+    //     }
+    // }
+
+    // variable_and_content_to_dict(internal_variable_list, object){
+    //     let objects_list = {};
+
+    //     $.each(internal_variable_list, (ind, internal_variable)=>{
+    //         objects_list[internal_variable.element] = object[ind];
+    //     })
+    //     return objects_list;
+    // }
+
+    // get_content_from_objects_list(objects_list, tag){
+    //     let test_list = [];
+    //     $.each(objects_list, (ind, object)=>{
+    //         let variable_object_dict = this.variable_and_content_to_dict(tag.internal_tags_list, object)
+    //         let tag_content = this.variable_to_internal_html(variable_object_dict, tag.internal_html)
+
+    //         test_list.push(tag_content)
+    //     })
+    //     return test_list;
+    // }
+
+    // variable_to_internal_html(tags_dict, tag_content){
+    //     $.each(tags_dict, (variable_name, variable_content)=>{
+    //         tag_content = tag_content.replaceAll(variable_name, variable_content)
+    //     })
+    //     return tag_content
+    // }
+}
+
+class ObjectToHTML extends CustomFunctionTag{
+    constructor(...props){
+        super(...props);
+
+        // this.html_cleaning();
+        this.request_for_original_html();
+    }
+
+    async request_for_original_html(){
+        await this.get_original_html();
+    }
+
+    async get_original_html(){
+        console.log('Запрос оригинального html')
+        return new Promise((resolve, reject)=>{
+            $.ajax({
+                url: window.location.href,
+                method: 'GET',
+                dataType: 'html',
+                async: true,
+                success: (response)=>{
+                    this.html = response;
+                    console.log('Оригинальный html получен')
+                    resolve();
+                },
+                error: (xhr, errro, status)=>{
+                    reject();
+                }
+            });
+        });
+    }  
+
+    // async html_cleaning(){
+    //     console.log('Запуск процесса очистки тегов')
+    //     let variables_tags = this.get_html_tags_list('variable', null, true);
+    //     let functions_tags = this.get_html_tags_list('function');
+    //     console.log(variables_tags, functions_tags)
+    //     functions_tags = this.set_tag_dependencies(functions_tags);
+    //     // console.log(variables_tags, functions_tags)
+    //     try {
+    //         for (let i=0; i<functions_tags.length; i++){
+    //             let tag = functions_tags[i];
+    //             tag = this.get_function_tag_code(tag);
+    
+    //             if (tag.is_endtag){
+    //                 functions_tags.splice(i, 1);
+    //                 i--;
+    //                 continue;
+    //             }
+                
+    //             tag.content.full = '';
+    //         }
+    
+    //         for (let i=0; i<variables_tags.length; i++){
+    //             variables_tags[i].content = '';
+    //         }
+    //         // console.log(variables_tags, functions_tags)
+    //     } catch (error) {
+    //         console.error(error);
+    //     } finally {
+    //         this.content_to_html(functions_tags, 'function');
+    //         this.content_to_html(variables_tags, 'variable');
+    //         console.log('Процесс очистки тегов закончен')
+    //     }
+    // }
+
+     /**
+     * @ A method that starts the process of processing variable tags and function tags, and substituting objects that correspond to them.
+     * @ The launch is carried out by running the:
+     * @ get_html_tags_variable() 
+     * @ and 
+     * @ get_html_tags_function() 
+     * @ methods.
+     */
+    async tag_processing(){
+        console.log('Начало обработки тегов')
+        this.new_html = this.html;
+        await this.get_html_tags_function();
+        await this.get_html_tags_variable();
+        console.log('Конец обработки')
+        this.render_html();
+    }
+
+    render_html(){
+        document.getElementsByTagName('html')[0].innerHTML = this.new_html;
     }
 }
 
-class DetailViewApiRequest {
+class DetailViewAPIRequest {
     constructor(props){
         this.api_url = props.api_url;
-
         this.success = props.success;
 
         this.object;
 
         this.html = document.getElementsByTagName('html')[0].innerHTML;
-        this.custom_tags = new ObjectToHTML();
-        
-        this.get_object();
     }
     
     async get_object() {
@@ -408,13 +740,14 @@ class DetailViewApiRequest {
                 dataType: 'json',
                 async: true,
                 success: (response)=>{
-                    self.object = response;
-                    self.custom_tags.tag_processing();
-                    self.success();
-                    resolve();
+                    $.each(response, (key, value)=>{
+                        self[key] = value;
+                    });
+                    self.success(response);
+                    resolve(response);
                 },
                 error: (xhr, error, status)=>{
-                    console.error(`XHR: ${xhr}, Error: ${error}, Status: ${status}`)
+                    console.error(`Error: ${error}, Status: ${xhr.status}, ${status}`)
                     reject();
                 }
             })
@@ -422,13 +755,25 @@ class DetailViewApiRequest {
     }
 }
 
-class UpdateViewApiRequest extends DetailViewApiRequest {
+class UpdateViewAPIRequest extends DetailViewAPIRequest {
     constructor(props){
         super(props);
     }
 }
 
-class RelatedFieldAPIRequest {
+class ListViewAPIRequest extends DetailViewAPIRequest {
+    constructor(props){
+        super(props);
+
+        // this.get_object_list();
+    }
+
+    async get_object_list(){
+        return await super.get_object();
+    };
+}
+
+class RelatedFieldAPIRequest extends ListViewAPIRequest {
     /**
      * @param {dict} props
      * @param {list} props.related_api_urls list
@@ -455,25 +800,6 @@ class RelatedFieldAPIRequest {
      * @param {str} api_url
      * @param {str} data_key
      */
-    async __get_object_list__(data_key, api_url){
-        let self = this;
-
-        return new Promise((resolve, reject)=>{
-            $.ajax({
-                url: api_url,
-                method: 'GET',
-                dataType: 'json',
-                success: function(response){
-                    self.response_data[data_key] = response;
-                    resolve();
-                },
-                error: function(xhr, status, error){
-                    console.error(`XHR: ${xhr}, status: ${status}, Error: ${error}`)
-                    reject();
-                },
-            });
-        })
-    };
 
     async __get_related_fields_data__(){
         if (Object.prototype.toString.call(this.related_api_urls) === '[object Object]'){

@@ -21,7 +21,7 @@ class Movie(models.Model):
 
     movie_title = models.CharField(max_length=20)
     movie_date = models.DateField()
-    movie_director = models.ManyToManyField(Director)
+    movie_directors = models.ManyToManyField(Director)
     movie_actors = models.ManyToManyField(Actor)
 
     def __str__(self):

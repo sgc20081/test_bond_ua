@@ -13,7 +13,7 @@ class ActorSerializer(serializers.ModelSerializer):
 
 class MovieSerializer(serializers.ModelSerializer):
     movie_actors = ActorSerializer(many=True, read_only=True)
-    movie_director = DirectorSerializer(many=True, read_only=True)
+    movie_directors = DirectorSerializer(many=True, read_only=True)
     movie_date = serializers.DateField(format='%Y-%m-%d')
 
     class Meta:
@@ -22,6 +22,6 @@ class MovieSerializer(serializers.ModelSerializer):
             'id', 
             'movie_title', 
             'movie_date', 
-            'movie_director', 
+            'movie_directors', 
             'movie_actors'
             ]

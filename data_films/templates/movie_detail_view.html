@@ -8,14 +8,14 @@
     <p>[[ some_content ]]</p>
     <p>[[ some_content_2 ]]</p>
     <p>
-        [% for some if movie.movie_actors %]
+        [% for some in movie.movie_actors %]
             <p>[[ some_test ]]</p>
             <p>test [[ some ]]</p>
             <p>test [[ some.actor_name ]]</p>
         [% endfor %]
     </p>
     <p>Режиссёр: 
-        [% for director in movie.movie_director %]
+        [% for director in movie.movie_directors %]
             <a director_id="[[ director.id ]]" href="director-[[ director.id ]]">[[ director.director_name ]]</a>
         [% endfor %]
     </p>
@@ -30,4 +30,20 @@
 {% block scripts %}
     {% load static %}
     <script src="{% static 'scripts/detail_update_apis_requests.js' %}"></script>
+    <script>
+        let object_detail_request_url = sessionStorage.getItem('request_object_url');
+        var movie;
+
+        if (object_detail_request_url !== undefined) {
+            
+            let custom_tags_class = new ObjectToHTML();
+            movie = new DetailViewAPIRequest({
+                api_url: `api/${object_detail_request_url}`,
+                success: (response)=>{
+                    custom_tags_class.tag_processing();
+                }
+            });
+            movie.get_object();
+        }
+    </script>
 {% endblock %}

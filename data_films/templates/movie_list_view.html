@@ -14,11 +14,38 @@
             </tr>
         </thead>
         <tbody class="movies_rows">
+            [% for movie in movies.results %]
+            <tr class="movie_row">
+                <td><a object_id="[[ movie.id ]]" href="?api_url=movie-[[ movie.id ]]">[[ movie.movie_title ]]</a></td>
+                <td>[[ movie.movie_date ]]</td>
+                <td>
+                    [% for director in movie.movie_directors %]
+                        <a object_id="[[ director.id ]]" href="?api_url=director-[[ director.id ]]">[[ director.director_name ]]</a><br>
+                    [% endfor %]
+                </td>
+                <td>
+                    [% for actor in movie.movie_actors %]
+                        <a object_id="[[ actor.id ]]" href="?api_url=director-[[ actor.id ]]">[[ actor.actor_name ]]</a><br>
+                    [% endfor %]
+                </td>
+            </tr>
+            [% endfor %]
         </tbody>
     </table>
     <div class="loader_bar"></div>
     <div class="pagination">
+        <p>[[ movies.page ]] из [[ movies.last_page ]] страниц</p>
+        [% if movies.previus != null %]
+            <span class="step_links">
+                <a href="[[ movies.previous ]]">Предыдущая</a>
+            </span>
+        [% endif %]
         <span class="step_links">
+            <a href="[[ movies.next ]]">Следующая</a>
+        </span>
+        <span class="step_links"></span>
+        <span class="step_links">
+            <a href="http://127.0.0.1:8000/movies-api?page=[[ movies.last_page ]]">Последняя</a>
         </span>
     </div>
     <br>
@@ -48,4 +75,15 @@
 {% block scripts %}
     {% load static %}
     <script src="{% static 'scripts/main.js' %}"></script>
+    <script>
+        let custom_tags_class = new ObjectToHTML();
+        movies = new ListViewAPIRequest({
+            api_url: `${window.location.origin}/movies-api`,
+            success: (response)=>{
+                console.log(response)
+                custom_tags_class.tag_processing();
+            }
+        });
+        movies.get_object_list();
+    </script>
 {% endblock %}
