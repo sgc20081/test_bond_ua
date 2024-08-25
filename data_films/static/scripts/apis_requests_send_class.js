@@ -1,6 +1,41 @@
-class CustomTag{
+class Tag {
     constructor(){
-        this.html = document.getElementsByTagName('html')[0].outerHTML;
+        this.type = '';
+        this.symbol = '';
+
+        this.beginning_tag_index = 0;
+        this.ending_tag_index = 0;
+
+        this.element = '';
+        this.element_text = '';
+
+        this.header = {list: []};
+    }
+
+    get_properties(tag_object){
+        let object = tag_object;
+        let new_object = this;
+
+        function recursion(object, new_object){
+
+            $.each(object, (key, propertie)=>{
+                if(Object.prototype.toString.call(propertie) === '[object Object]'){
+                    new_object[key] = recursion(propertie, new_object[key])
+                } else {
+                    new_object[key] = propertie;
+                }
+            });
+            return new_object;
+        }
+        recursion(object, new_object);
+        return new_object;
+    }
+}
+
+class CustomTag extends Tag{
+    constructor(...props){
+        super(...props)
+        
         this.tags_list = {};
         this.processed_function_tags = [];
         this.invalid_functions_tags = [];
@@ -42,9 +77,9 @@ class CustomTag{
         // console.log(source_html)
 
         function recursion() {
-
-            let tag = new Tag();
+            let tag = new CustomTag();
             
+            tag.html = self.html;
             tag.type = tag_type;
             tag.symbol = opening_tag_symbol;
             tag.index_number = index_number;
@@ -87,20 +122,24 @@ class CustomTag{
             }
         }
         recursion();
+        // console.log(__tags_list__)
         return __tags_list__;
     }
 
     tag_identification(tag){
         if (tag.type == 'variable' || tag.type == 'inner_variable'){
-            tag = new VariableTag().get_properties(tag);
+            return new VariableTag().get_properties(tag);
         } else if (tag.type == 'function' && tag.header.list.length > 1){
-            tag = new FunctionOpenTag().get_properties(tag);
-        } else if (tag.type == 'function' && tag.header.list.length == 1){
-            tag = new FunctionEndTag().get_properties(tag);
-        } else {
-            throw new Error(`Failed to set tag type or syntax is invalid: ${tag.element}`);
+            console.log('11', tag)
+            console.log('22', new FunctionOpenTag().get_properties(tag))
+            return new FunctionOpenTag().get_properties(tag);
+        } else if (tag.type == 'function' && FunctionEndTag.check_for_endtag(tag)){
+            return new FunctionEndTag().get_properties(tag);
+        } else if (tag.type == 'function' && FunctionElseTag.check_else_tag(tag)){
+            return new FunctionElseTag().get_properties(tag);
         }
-        return tag;
+        console.warn(tag);
+        throw new Error(`Failed to set tag type or syntax is invalid: ${tag.element}`);
     }
 
     variable_is_global(tag){
@@ -108,6 +147,21 @@ class CustomTag{
             return true;
         } else {
             return false;
+        }
+    }
+    /**
+     * @param {string} variable
+     * @returns {list} 
+     */
+    variable_to_list(variable){
+        if (typeof(variable) == 'string'){
+            if(variable.indexOf('.') != -1){
+                return variable.split('.');
+            } else {
+                return [variable];
+            }
+        } else {
+            throw new Error(`The "variable" parameter must be a string, not an ${typeof(variable)}.`);
         }
     }
 
@@ -154,9 +208,10 @@ class CustomTag{
                 this.new_html = this.new_html.replaceAll(tag.element, tag.content);
             });
         } else if (tag_type == 'function'){
+            console.log('Function tags list', tags_list)
             $.each(tags_list, (ind, tag)=>{
                 if (!tag.is_child){
-                    console.log(this.new_html.indexOf(tag.full_original_html))
+                    // console.log(this.new_html.indexOf(tag.full_original_html))
                     this.new_html = this.new_html.replaceAll(tag.full_original_html, tag.content.full);
                 } else {
                     // console.log(`tag to html: `,tag)
@@ -166,43 +221,7 @@ class CustomTag{
     }
 }
 
-class Tag extends CustomTag {
-    constructor(...props){
-        super(...props)
-
-        this.type = '';
-        this.symbol = '';
-
-        this.beginning_tag_index = 0;
-        this.ending_tag_index = 0;
-
-        this.element = '';
-        this.element_text = '';
-
-        this.header = {list: []};
-    }
-
-    get_properties(tag_object){
-        let object = tag_object;
-        let new_object = this;
-
-        function recursion(object, new_object){
-
-            $.each(object, (key, propertie)=>{
-                if(Object.prototype.toString.call(propertie) === '[object Object]'){
-                    new_object[key] = recursion(propertie, new_object[key])
-                } else {
-                    new_object[key] = propertie;
-                }
-            });
-            return new_object;
-        }
-        recursion(object, new_object);
-        return new_object;
-    }
-}
-
-class VariableTag extends Tag {
+class VariableTag extends CustomTag {
     constructor(...props){
         super(...props);
 
@@ -210,7 +229,7 @@ class VariableTag extends Tag {
     }
 }
 
-class FunctionTag extends Tag {
+class FunctionTag extends CustomTag {
     constructor(...props){
         super(...props);
 
@@ -247,15 +266,15 @@ class FunctionOpenTag extends FunctionTag {
 
         this.internal_variables_list = [];
 
-        this.is_parent = null
-        this.is_child = null;
+        this.is_parent = false;
+        this.is_child = false;
 
         this.child_tags = [];
         this.parent_tag = [];
     }
 }
 
-class CustomFunctionForTag extends FunctionOpenTag {
+class FunctionForTag extends FunctionOpenTag {
     constructor(...props){
         super(...props)
 
@@ -273,20 +292,20 @@ class CustomFunctionForTag extends FunctionOpenTag {
      * @param {object} tag 
      * @returns {object}
      */
-    static processing_for_function(tag){
-        tag = CustomFunctionForTag.get_internal_tag_markup(tag);
+    processing_for_function(tag){
+        tag = this.get_internal_tag_markup(tag);
 
-        if (tag.header.dict.operator != 'in'){
-            throw new Error(`Unexpected operator's value. ${tag.element} recieved "${tag.header.dict.operator}" instead of "in"`)
+        if (tag.header.dict.operator == 'in'){
+            tag = this.get_internal_variables(tag);
+            tag = this.get_content_list(tag);
+            tag = this.content_to_html_list(tag);
         } else {
-            tag = CustomFunctionForTag.get_internal_variables(tag);
-            tag = CustomFunctionForTag.get_content_list(tag);
-            tag = CustomFunctionForTag.content_to_html_list(tag);
+            throw new Error(`Unexpected operator's value. ${tag.element} recieved "${tag.header.dict.operator}" instead of "in"`)
         }
         return tag;
     }
 
-    static get_internal_tag_markup(tag){
+    get_internal_tag_markup(tag){
         tag.header.dict.variable = tag.header.list[1];
         tag.header.dict.operator = tag.header.list[2];
         tag.header.dict.iterable_variable = tag.header.list[3];
@@ -295,32 +314,31 @@ class CustomFunctionForTag extends FunctionOpenTag {
         return tag;
     }
 
-    static get_internal_variables(tag){
-        console.log(tag)
-        tag.internal_variables_list = tag.get_html_tags_list('inner_variable', tag);
+    get_internal_variables(tag){
+        // console.log(tag)
+        tag.internal_variables_list = this.get_html_tags_list('inner_variable', tag);
         return tag;
     }
 
-    static get_content_list(tag){
+    get_content_list(tag){
         if(!tag.is_child){
-            tag.content.list = tag.get_tag_content(tag.header.dict.iterable_variable_list);
-            return tag;
+            tag.content.list = this.get_tag_content(tag.header.dict.iterable_variable_list);
         } else if (tag.is_child) {
-            $.each(tag.parent_tag[0].content.list, (ind, parent_object)=>{
-                tag.content.list.push(tag.get_tag_content([tag.header.dict.iterable_variable_list[1]], parent_object));
+            tag.parent_tag[0].content.list.forEach((parent_object)=>{
+                tag.content.list.push(this.get_tag_content([tag.header.dict.iterable_variable_list[1]], parent_object));
             });
         }
         return tag;
     }
 
-    static content_to_html_list(tag){
-        let content_list = tag.content.list;
-
+    content_to_html_list(tag){
+        let self = this;
+        let content_list = tag.content.list.map((object)=>{return object});
         function object_to_html(object){
             let html_with_content = tag.internal_html.original;
 
             $.each(tag.internal_variables_list, (i, internal_variable)=>{
-                let content = tag.get_tag_content([internal_variable.header.list[1]], object)
+                let content = self.get_tag_content([internal_variable.header.list[1]], object)
                 html_with_content = html_with_content.replaceAll(internal_variable.element, content)
             })
 
@@ -354,11 +372,11 @@ class CustomFunctionForTag extends FunctionOpenTag {
     }
 }
 
-class CustomFunctionIfTag extends FunctionOpenTag {
+class FunctionIfTag extends FunctionOpenTag {
     constructor(...props){
         super(...props)
 
-        this.if_operators = ['==', '!=']
+        this.operators = ['==', '!=', 'in']
 
         this.header = {...super.header,
                         dict: {function_type: '',
@@ -368,29 +386,140 @@ class CustomFunctionIfTag extends FunctionOpenTag {
                             iterable_variable_list: []
                             }
                         }
+
+        this.is_else = false;
+        this.elsetag = null;
+
+        this.true_module = '';
+        this.else_module = '';
     }
 
     /**
      * @param {object} tag 
      * @returns {object}
      */
-    static processing_if_function(tag){
-        tag = CustomFunctionIfTag.get_internal_tag_markup(tag);
+    processing_if_function(tag){
+        tag = this.get_internal_tag_markup(tag);
+        tag = this.condition_check(tag);
         console.log('If tag: ', tag)
         return tag;
     }
 
-    static get_internal_tag_markup(tag){
+    get_internal_tag_markup(tag){
         tag.header.dict.variable_1 = tag.header.list[1];
+        tag.header.dict.variable_1_list = this.variable_to_list(tag.header.dict.variable_1);
+
+        if (tag.header.dict.variable_1_list[0] in window){
+            tag.header.dict.variable_1_value = this.get_tag_content(tag.header.dict.variable_1_list);
+        } else if (tag.header.dict.variable_1_list[0] == 'null' || tag.header.dict.variable_1_list[0] == 'undefined'){
+            tag.header.dict.variable_1_value = `${tag.header.dict.variable_1_list[0]}`;
+        }
 
         if (tag.header.list.length > 2){
             tag.header.dict.operator = tag.header.list[2];
-            tag.header.dict.variable_2 = tag.header.list[3];      
+            tag.header.dict.variable_2 = tag.header.list[3];
+            tag.header.dict.variable_2_list = this.variable_to_list(tag.header.dict.variable_2);
+
+            this.operator_is_valid(tag.header.dict.operator);
+
+            if (tag.header.dict.variable_2_list[0] in window){
+                tag.header.dict.variable_2_value = this.get_tag_content(tag.header.dict.variable_2_list);
+            } else if (tag.header.dict.variable_2_list[0] == 'null' || tag.header.dict.variable_2_list[0] == 'undefined'){
+                tag.header.dict.variable_2_value = `${tag.header.dict.variable_2_list[0]}`;
+            }
         }
+
+        // if (tag.is_child){
+
+        //     if(tag.parent_tag[0].function_type== 'for'){
+
+        //         if (tag.header.dict.variable_1_list[0] == tag.parent_tag[0].header.dict.variable){
+        //             console.log('There is a match for variable 1')
+        //             console.log(tag.get_tag_content([tag.parent_tag[0].header.dict.variable], tag.parent_tag[0].content.list))
+        //         }
+
+        //         if (tag.header.dict.variable_2_list[0] == tag.parent_tag[0].header.dict.variable){
+        //             console.log('There is a match for variable 2')
+        //             console.log(tag.get_tag_content([tag.parent_tag[0].header.dict.variable], tag.parent_tag[0].content.list[0]))
+        //         }
+
+        //     }
+        // }
 
         return tag;
     }
 
+    /**
+     * @param {*} operator 
+     */
+    operator_is_valid(operator){
+        if(this.operators.includes(operator)){
+            return true;
+        } else {
+            throw new Error(`Operator is invalid. Expected "==" or "!=" or "in", but got "${operator}"`);
+        }
+    }
+
+    get_else_module(tag){
+        let elsetag = new RegExp(`\\[%\\s*else\\s*%\\]`)
+    }
+
+    condition_check(tag){
+        if (tag.header.dict.variable_2 != 'undefined' || tag.header.dict.variable_2 != 'null'){
+
+            switch (tag.header.dict.operator){
+                case '==':
+                    if(`${tag.header.dict.variable_1_value}` == `${tag.header.dict.variable_2_value}`){
+                        return this.condition_true(tag);
+                    } else {
+                        return this.condtition_false(tag);
+                    }
+                case '!=':
+                    if(`${tag.header.dict.variable_1_value}` != `${tag.header.dict.variable_2_value}`){
+                        return this.condition_true(tag);
+                    } else {
+                        return this.condtition_false(tag);
+                    }
+            }
+        } else {
+            // pass
+        }
+    }
+
+    condition_true(tag){
+        console.log('condition_is_true');
+        if (tag.elsetag){
+            tag.true_module = this.html.slice(tag.ending_tag_index, tag.elsetag[0].beginning_tag_index);
+            console.log(tag.true_module)
+            tag.content.full = tag.true_module;
+        } else {
+            tag.content.full = tag.internal_html.original;
+        }
+        return tag;
+    }
+
+    condtition_false(tag){
+        console.log('condition_is_false');
+        if (tag.elsetag){
+            tag.false_module = this.html.slice(tag.elsetag[0].ending_tag_index, tag.endtag[0].beginning_tag_index);
+            console.log(tag.false_module)
+            tag.content.full = tag.false_module;
+        }
+        return tag;
+    }
+}
+
+class FunctionElseTag extends FunctionTag {
+    constructor(...props){
+        super(...props);
+
+        this.is_else = true;
+        this.if_tag = [];
+    }
+
+    static check_else_tag(tag){
+        return new RegExp(`\\[%\\s*else\\s*%\\]`).test(tag.element);
+    }
 }
 
 class FunctionEndTag extends FunctionTag {
@@ -399,6 +528,10 @@ class FunctionEndTag extends FunctionTag {
         
         this.is_endtag = true;
         this.opentag = [];
+    }
+
+    static check_for_endtag(tag){
+        return new RegExp(`\\[%\\s*end[a-z]+\\s*%\\]`).test(tag.element);
     }
 }
 
@@ -437,20 +570,34 @@ class CustomFunctionTag extends CustomVariableTag{
         return new Promise((resolve, reject)=>{
             try {
                 let tags_list = this.get_html_tags_list('function');
-                tags_list = this.set_tag_dependencies(tags_list);
-                
-                for (let i=0; i < tags_list.length; i++){
-                    let tag = tags_list[i]
-
-                    if (tag.is_endtag){
-                        tags_list.splice(i, 1);
-                        i--;
-                    } else {
-                        tag = this.get_function_tag_code(tag);
+                let tags_list_copy = [];
+                console.log('11111', tags_list);
+                tags_list.forEach((tag, ind)=>{
+                    if(tag.is_opentag){
                         tag = this.standard_functions(tag);
+                        // console.log('2222', tag);
+                        tags_list[ind] = tag;
+                        // tags_list_copy.push(tag);
                     }
-                }
+                })
 
+                // tags_list = tags_list_copy;
+                // tags_list_copy = [];
+                tags_list = this.set_tag_dependencies(tags_list);
+                console.log('3333', tags_list)
+
+                tags_list.forEach((tag)=>{
+                    // console.log('aaaaaa', tag)
+                    if (tag.is_opentag){
+                        tag = this.get_function_tag_code(tag);
+                        tag = this.processing_function(tag);
+                        console.log('123123', tag)
+                        // tag = this.standard_functions(tag);
+                        tags_list_copy.push(tag);
+                    }
+                })
+
+                tags_list = tags_list_copy;
                 tags_list = this.child_content_to_parent(tags_list);
                 this.content_to_html(tags_list, 'function');
 
@@ -468,7 +615,7 @@ class CustomFunctionTag extends CustomVariableTag{
             let tag = tags_list[ind];
             let open_tags_count = 0;
             let close_tags_count = 0;
-
+            
             if (tag.is_opentag){
                 open_tags_count++;
 
@@ -477,6 +624,11 @@ class CustomFunctionTag extends CustomVariableTag{
 
                     if (open_tags_count != close_tags_count && tags_list[i+1] === undefined){
                         throw new Error(`No closing tag found for ${tag.element}. Did you forget to put the [% end${tag.function_type} %] closing tag?`)
+                    }
+
+                    if (tag.is_else){
+                        i++;
+                        return recursion();
                     }
 
                     if (tags_list[i+1].is_endtag){
@@ -488,7 +640,7 @@ class CustomFunctionTag extends CustomVariableTag{
                             
                             return;
                         } else {
-                            i++
+                            i++;
                             return recursion();
                         }
                     } else if (tags_list[i+1].is_opentag){
@@ -502,10 +654,18 @@ class CustomFunctionTag extends CustomVariableTag{
                         open_tags_count++;
                         return recursion();
                     }
+                    i++;
+                    return recursion();
                 }
                 recursion();
-            } else if (tag.is_endtag) {
+            } else if (tag.is_endtag){
                 close_tags_count++;
+            } else if (tag.is_else){
+                tag.if_tag = [tags_list[ind-1]];
+                tag.if_tag[0].elsetag = [tag];
+            } else {
+                console.warn(tag);
+                throw new Error(`Unknown tag type`)
             }
         }
         return tags_list;
@@ -515,7 +675,7 @@ class CustomFunctionTag extends CustomVariableTag{
         let self = this;
 
         try{
-            if (tag.is_endtag){
+            if (!tag.is_opentag){
                 return;
             }
 
@@ -523,11 +683,7 @@ class CustomFunctionTag extends CustomVariableTag{
             if(source_html != null){
                 html = source_html;
             }
-
-            tag.header.dict.function_type = tag.header.list[0];
-
-            tag.function_type = tag.header.list[0];
-
+            
             tag.full_original_html = this.html.slice(tag.beginning_tag_index, tag.endtag[0].ending_tag_index);
             tag.internal_html.original = this.html.slice(tag.ending_tag_index, tag.endtag[0].beginning_tag_index);
 
@@ -550,15 +706,32 @@ class CustomFunctionTag extends CustomVariableTag{
      * @returns {object}
      */
     standard_functions(tag){
-        let self = this;
+        tag.header.dict.function_type = tag.header.list[0];
+        tag.function_type = tag.header.list[0];
+
         if (tag.function_type == 'for'){
-            tag = CustomFunctionForTag.processing_for_function(tag);
+            tag = new FunctionForTag().get_properties(tag);
         } else if (tag.function_type == 'if'){
-            tag = CustomFunctionIfTag.processing_if_function(tag);
-            // console.warn('The "if" function handling is not yet written');
+            tag = new FunctionIfTag().get_properties(tag);
         } else {
+            console.warn(tag);
             throw new Error('Unsuported function type: ', tag.function_type)
         }
+        // console.log('66', tag.content)
+        return tag;
+    }
+
+    processing_function(tag){
+        if (tag.function_type == 'for'){
+            console.log(tag)
+            tag = tag.processing_for_function(tag);
+        } else if (tag.function_type == 'if'){
+            tag = tag.processing_if_function(tag);
+        } else {
+            console.warn(tag);
+            throw new Error('Unsuported function type: ', tag.function_type)
+        }
+        // console.log('66', tag.content)
         return tag;
     }
 

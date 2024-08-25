@@ -13,6 +13,7 @@
                 <th class="sortable" data-sort="movie_actors">Актёры</th>
             </tr>
         </thead>
+        [[ next_page ]]
         <tbody class="movies_rows">
             [% for movie in movies.results %]
             <tr class="movie_row">
@@ -35,7 +36,7 @@
     <div class="loader_bar"></div>
     <div class="pagination">
         <p>[[ movies.page ]] из [[ movies.last_page ]] страниц</p>
-        [% if movies.previus != null %]
+        [% if movies.previous != null%]
             <span class="step_links">
                 <a href="[[ movies.previous ]]">Предыдущая</a>
             </span>
@@ -78,12 +79,16 @@
     <script>
         let custom_tags_class = new ObjectToHTML();
         movies = new ListViewAPIRequest({
-            api_url: `${window.location.origin}/movies-api`,
+            api_url: `${window.location.origin}/api/movies-list`,
             success: (response)=>{
-                console.log(response)
+                // console.log(response);
                 custom_tags_class.tag_processing();
             }
         });
         movies.get_object_list();
+        function next_page (){
+            console.log(movies.page)
+            return `${movies.page + 1} ${movies.page + 2} ${movies.page + 3} ${movies.page + 4} ${movies.page + 5}`;
+        }
     </script>
 {% endblock %}
